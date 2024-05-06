@@ -19,9 +19,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Compile {
-        path: String,
-    },
     Run {
         path: String,
     },
@@ -34,9 +31,6 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Compile { path: _ } => {
-            unimplemented!();
-        },
         Commands::Run { path: _ } => {
             unimplemented!();
         },
@@ -49,7 +43,6 @@ fn main() {
 
                 let mut script = String::new();
                 let _ = io::stdin().read_line(&mut script);                
-                let tree = inst.parse(&script);
                 match inst.parse(&script) {
                     Ok(tree) => match env.eval(&tree) {
                         Ok(res) => println!("🔥 {}", res),

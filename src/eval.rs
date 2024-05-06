@@ -13,7 +13,10 @@ pub enum Value<'a> {
 }
 
 pub enum Func<'a> {
-    BuiltIn(fn(&mut Env<'a>, &[ast::Expr]) -> Result<Rc<Value<'a>>, String>),
+    BuiltIn {
+        name: &'a str,
+        func: fn(&mut Env<'a>, &[ast::Expr]) -> Result<Rc<Value<'a>>, String>,
+    },
     UserDefined {
         n_args: usize,
         body: ast::Expr,
@@ -29,7 +32,12 @@ macro_rules! insert_builtin {
     ($data:ident, $name:expr, $func:ident) => {
         $data.insert(
             ast::Symbol::from($name),
-            Rc::new(Value::Func(Func::BuiltIn($func)))
+            Rc::new(Value::Func(
+                Func::BuiltIn {
+                    name: stringify!($func),
+                    func: $func,
+                }
+            ))
         );
     };
 }
@@ -74,7 +82,7 @@ impl<'a> Env<'a> {
                 let res = self.eval(&first)?;
                 match res.as_ref() {
                     Value::Func(f) => match f {
-                        Func::BuiltIn(func) => {
+                        Func::BuiltIn { func, .. } => {
                             let value = (*func)(self, &rest[..])?;
                             Ok(value.clone())
                         },
@@ -134,8 +142,11 @@ impl Display for Value<'_> {
                 }
                 write!(fmt, ")")
             },
-            Value::Func(func) => {
-                write!(fmt, "function")
+            Value::Func(func) => match func {
+                Func::BuiltIn { name, .. } =>
+                    write!(fmt, "<built-in function '{}'>", name),
+                Func::UserDefined { .. } =>
+                    write!(fmt, "function")
             }
         }
     }

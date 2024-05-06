@@ -17,7 +17,7 @@ pub Expr: ast::Expr = {
 };
 
 List: ast::Expr = {
-    "(" <exprs:(Expr)+> ")" => ast::Expr::List(exprs),
+    "(" <exprs:(Expr)*> ")" => ast::Expr::List(exprs),
 };
 
 Symbol: ast::Expr = {

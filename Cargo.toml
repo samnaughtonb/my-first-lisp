@@ -1,0 +1,11 @@
+[package]
+name = "my-first-lisp"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+lalrpop = { version = "0.20.0" }
+
+[dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
+lalrpop-util = { version = "0.20.0", features = ["lexer", "unicode"] }

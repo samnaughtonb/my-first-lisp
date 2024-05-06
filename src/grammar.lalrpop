@@ -1,0 +1,43 @@
+use std::str::FromStr;
+
+use crate::ast;
+
+grammar;
+
+pub Script: ast::Script = {
+    <exprs:(Expr)+> => ast::Script(exprs),
+};
+
+pub Expr: ast::Expr = {
+    List,
+    Symbol,
+    Float,
+    Integer,
+    Bool,    
+};
+
+List: ast::Expr = {
+    "(" <exprs:(Expr)+> ")" => ast::Expr::List(exprs),
+};
+
+Symbol: ast::Expr = {
+    // should match all Clojure-like identifiers
+    <s:r"[^\d\s().#][^\s().#]*"> => ast::Expr::Symbol(String::from(s)),
+};
+
+Float: ast::Expr = {
+    // TODO: add support for scientific notation
+    <s:r"[0-9]+(\.[0-9]+)"> =>
+        ast::Expr::Float(f64::from_str(s).unwrap()),
+};
+
+Integer: ast::Expr = {
+    // TODO: add support for scientific notation
+    <s:r"[0-9]+"> => 
+        ast::Expr::Integer(i64::from_str(s).unwrap()),
+};
+
+Bool: ast::Expr = {
+    "true" => ast::Expr::Bool(true),
+    "false" => ast::Expr::Bool(false),
+};

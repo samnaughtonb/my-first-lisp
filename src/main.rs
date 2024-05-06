@@ -41,20 +41,24 @@ fn main() {
             unimplemented!();
         },
         Commands::Repl => {
-            let inst = parser::ScriptParser::new();
+            let inst = parser::ExprParser::new();
+            let mut env = eval::Env::default();
             loop {
                 print!("sam's lisp >> ");
                 io::stdout().flush().unwrap();
 
                 let mut script = String::new();
                 let _ = io::stdin().read_line(&mut script);                
-                let res = inst.parse(&script);
-
-                if cli.debug {
-                    match res {
-                        Ok(res) => println!("🔥 {:?}", res),
-                        Err(err) => println!("😱 {:?}", err),
-                    }
+                let tree = inst.parse(&script);
+                match inst.parse(&script) {
+                    Ok(tree) => match env.eval(&tree) {
+                        Ok(res) => println!("🔥 {}", res),
+                        Err(msg) => {
+                            println!("😱 ERROR: {}", msg);
+                            if cli.debug { println!("   TREE:  {}", tree); }
+                        }
+                    },
+                    Err(msg) => println!("\n😱 PARSER ERROR: {}", msg),
                 }
             }
         },

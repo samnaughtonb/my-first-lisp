@@ -30,16 +30,21 @@ pub struct Env<'a> {
 
 macro_rules! insert_builtin {
     ($data:ident, $name:expr, $func:ident) => {
+        insert_builtin!($data, $name, $func, stringify!($func));
+    };
+    ($data:ident, $name:expr, $func:ident, $tag:expr) => {
         $data.insert(
             ast::Symbol::from($name),
-            Rc::new(Value::Func(
-                Func::BuiltIn {
-                    name: stringify!($func),
-                    func: $func,
-                }
-            ))
+            Rc::new(
+                Value::Func(
+                    Func::BuiltIn {
+                        name: $tag,
+                        func: $func,
+                    }
+                )
+            )
         );
-    };
+    }
 }
 
 impl<'a> Env<'a> {

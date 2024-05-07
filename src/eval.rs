@@ -53,6 +53,7 @@ impl<'a> Env<'a> {
 
     pub fn default() -> Self {
         let mut env = Self::new();
+        insert_builtin!(env, "def", def);
         insert_builtin!(env, "+", add);
         env
     }
@@ -95,6 +96,20 @@ impl<'a> Env<'a> {
             }
         }
     }
+}
+
+fn def<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
+    if args.len() != 2 {
+        return Err("'def' takes 2 arguments only".to_string());
+    }
+    let name = match args.get(0) {
+        Some(ast::Expr::Symbol(sym)) => Ok(sym),
+        _ => Err("First argument to 'def' must be a symbol"),
+    }?;
+    let value = env.eval(args.get(1).unwrap())?;
+    let sym = ast::Symbol::from(name);
+    env.insert(sym, value);
+    Ok(Rc::new(Value::Integer(0)))
 }
 
 fn add<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {

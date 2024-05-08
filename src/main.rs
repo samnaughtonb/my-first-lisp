@@ -44,11 +44,14 @@ fn main() {
                 let mut script = String::new();
                 let _ = io::stdin().read_line(&mut script);                
                 match inst.parse(&script) {
-                    Ok(tree) => match env.eval(&tree) {
-                        Ok(res) => println!("🔥 {}", res),
-                        Err(msg) => {
-                            println!("😱 ERROR: {}", msg);
-                            if cli.debug { println!("   TREE:  {}", tree); }
+                    Ok(tree) => {
+                        let tree_cloned = tree.clone();
+                        match env.eval(&tree_cloned) {
+                            Ok(res) => println!("🔥 {}", res),
+                            Err(msg) => {
+                                println!("😱 ERROR: {}", msg);
+                                if cli.debug { println!("   TREE:  {}", tree); }
+                            }
                         }
                     },
                     Err(msg) => println!("\n😱 PARSER ERROR: {}", msg),

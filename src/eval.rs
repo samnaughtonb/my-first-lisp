@@ -1,3 +1,5 @@
+use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Display, Error, Formatter};
 use std::rc::Rc;
@@ -18,14 +20,15 @@ pub enum Func<'a> {
         func: fn(&mut Env<'a>, &[ast::Expr]) -> Result<Rc<Value<'a>>, String>,
     },
     UserDefined {
-        n_args: usize,
+        params: Vec<ast::Expr>,
         body: ast::Expr,
     }
 }
 
+#[derive(Clone)]
 pub struct Env<'a> {
     data: HashMap<ast::Symbol, Rc<Value<'a>>>,
-    outer: Option<&'a Env<'a>>,
+    outer: Option<Rc<RefCell<Env<'a>>>>, // &'a Env<'a>>,
 }
 
 macro_rules! insert_builtin {
@@ -59,6 +62,7 @@ impl<'a> Env<'a> {
     pub fn default() -> Self {
         let mut env = Self::new();
         insert_builtin!(env, "def", def);
+        insert_builtin!(env, "fn", func, "fn");
         insert_builtin!(env, "+", add);
         env
     }
@@ -69,8 +73,8 @@ impl<'a> Env<'a> {
 
     fn get(&self, key: &ast::Symbol) -> Option<Rc<Value<'a>>> {
         match self.data.get(key) {
-            Some(val) => Some(val.clone()),
-            None => self.outer.and_then(|env| env.get(key)),
+            Some(val) => Some(Rc::clone(val)),
+            None => self.outer.as_ref()?.borrow().get(key),
         }
     }
 
@@ -92,8 +96,25 @@ impl<'a> Env<'a> {
                             let value = (*func)(self, &rest[..])?;
                             Ok(value.clone())
                         },
-                        Func::UserDefined { n_args, body } => {
-                            Ok(Rc::new(Value::Integer(0)))
+                        Func::UserDefined { params, body } => {
+                            if params.len() != rest.len() {
+                                return Err("Incorrect number of arguments provided".to_string());
+                            }
+                            let mut new_env = Env {
+                                data: HashMap::new(),
+                                outer: Some(Rc::new(RefCell::new(self.clone()))),
+                            };
+                            for (param, arg) in params.iter().zip(rest.iter()) {
+                                let _ = match param {
+                                    ast::Expr::Symbol(sym) => {
+                                        let arg_val = self.borrow_mut().eval(&arg)?;
+                                        new_env.borrow_mut().insert(ast::Symbol::from(sym), arg_val);
+                                        Ok(())
+                                    },
+                                    _ => Err("..."),
+                                }?;
+                            }
+                            new_env.borrow_mut().eval(&body)
                         }
                     },
                     _ => Err(format!("{} is not a function", first)),
@@ -101,6 +122,20 @@ impl<'a> Env<'a> {
             }
         }
     }
+}
+
+fn func<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
+    if args.len() != 2 {
+        return Err("'fn' takes 2 arguments only".to_string());
+    }
+    let params = match args.get(0).unwrap() {
+        ast::Expr::List(list) => Ok(list),
+        _ => Err("..."),
+    }?;
+    let body = args.get(1).unwrap();
+    Ok(Rc::new(Value::Func(Func::UserDefined { 
+        params: params.to_vec(),
+        body: body.clone() })))
 }
 
 fn def<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {

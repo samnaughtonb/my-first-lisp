@@ -2,8 +2,10 @@ use std::fmt::{Display, Error, Formatter};
 
 pub type Symbol = String;
 
+#[derive(Clone)]
 pub struct Script(pub Vec<Expr>);
 
+#[derive(Clone)]
 pub enum Expr {
     Bool(bool),
     Integer(i64),

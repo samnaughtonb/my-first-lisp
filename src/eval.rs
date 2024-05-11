@@ -63,6 +63,7 @@ impl<'a> Env<'a> {
         let mut env = Self::new();
         insert_builtin!(env, "def", def);
         insert_builtin!(env, "fn", func, "fn");
+        insert_builtin!(env, "if", ifdef, "if");
         insert_builtin!(env, "+", add);
         env
     }
@@ -136,6 +137,20 @@ fn func<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, Stri
     Ok(Rc::new(Value::Func(Func::UserDefined { 
         params: params.to_vec(),
         body: body.clone() })))
+}
+
+fn ifdef<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
+    if args.len() != 3 {
+        return Err("'if' takes 3 arguments".to_string());
+    }
+    let cond = env.eval(args.get(0).unwrap())?;
+    match cond.as_ref() {
+        Value::Bool(b) => match b {
+            true => env.eval(args.get(1).unwrap()),
+            false => env.eval(args.get(2).unwrap()),
+        },
+        _ => Err("Condition in 'if' must evaluate to a boolean value".to_string())
+    }
 }
 
 fn def<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {

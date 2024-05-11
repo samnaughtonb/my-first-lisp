@@ -9,3 +9,13 @@ This project is based on the excellent pedagogical essays of
 In contrast to the above, I'm using the LR(1) parser generator framework,
 LALRPOP, as I'm too lazy to write a parser myself (_despite_ it being really
 easy for S-expressions.)
+
+**Fibonacci example.**
+
+```lisp
+(def fib (fn (n)
+  (if (= n 0) 0
+      (if (= n 1) 1
+          (+ (fib (- n 1))
+             (fib (- n 2)))))))
+```

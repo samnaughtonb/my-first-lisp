@@ -64,7 +64,11 @@ impl<'a> Env<'a> {
         insert_builtin!(env, "def", def);
         insert_builtin!(env, "fn", func, "fn");
         insert_builtin!(env, "if", ifdef, "if");
-        insert_builtin!(env, "+", add);
+        insert_builtin!(env, "=", equals);
+        insert_builtin!(env, "+", addition);
+        insert_builtin!(env, "-", subtraction);
+        insert_builtin!(env, "*", multiplication);
+        insert_builtin!(env, "/", division);
         env
     }
 
@@ -167,35 +171,91 @@ fn def<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, Strin
     Ok(Rc::new(Value::Integer(0)))
 }
 
-fn add<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
-    let (first, rest) = args.split_first().ok_or("Cannot apply '+' to zero arguments")?;
+macro_rules! arithmetic_builtin {
+    ($name:ident, $op:tt) => {
+        fn $name<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
+            let (first, rest) = args.split_first().ok_or(concat!("Cannot apply '", stringify!($op), "' to zero arguments"))?;
+            let first = env.eval(&first)?;
+            match first.as_ref() {
+                Value::Integer(i) => {
+                    let mut res: i64 = *i;
+                    for item in rest {
+                        let value = env.eval(&item)?;
+                        let value = match value.as_ref() {
+                            Value::Integer(j) => Ok(j),
+                            _ => Err(format!(concat!("Non-integer '{}' found in integer ", stringify!($name)), value))
+                        }?;
+                        res = res $op value;
+                    }
+                    Ok(Rc::new(Value::Integer(res)))
+                },
+                Value::Float(f) => {
+                    let mut res: f64 = *f;
+                    for item in rest {
+                        let value = env.eval(&item)?;
+                        let value = match value.as_ref() {
+                            Value::Float(g) => Ok(g),
+                            _ => Err(format!(concat!("Non-float '{}' found in float ", stringify!($name)), value))
+                        }?;
+                        res = res $op value;
+                    }
+                    Ok(Rc::new(Value::Float(res)))
+                },
+                _ => Err("Must apply '+' to numeric types".to_string())
+            }
+        }
+    };
+}
+
+arithmetic_builtin!(addition, +);
+arithmetic_builtin!(subtraction, -);
+arithmetic_builtin!(multiplication, *);
+arithmetic_builtin!(division, /);
+
+fn equals<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
+    if args.len() < 2 {
+        return Err("Cannot apply '=' to fewer than 2 arguments".to_string());
+    }
+    let (first, rest) = args.split_first().unwrap();
     let first = env.eval(&first)?;
     match first.as_ref() {
-        Value::Integer(i) => {
-            let mut sum: i64 = *i;
+        Value::Bool(b) => {
+            let mut res = true;
             for item in rest {
                 let value = env.eval(&item)?;
-                let value = match value.as_ref() {
-                    Value::Integer(j) => Ok(j),
-                    _ => Err(format!("Non-integer '{}' found in integer sum", value))
+                res = match value.as_ref() {
+                    Value::Bool(c) => Ok(res && (b == c)),
+                    _ => Err("Non-boolean '{}' found in boolean equals"),
                 }?;
-                sum += value;
+                if !res { break; }
             }
-            Ok(Rc::new(Value::Integer(sum)))
+            Ok(Rc::new(Value::Bool(res)))
+        },
+        Value::Integer(i) => {
+            let mut res = true;
+            for item in rest {
+                let value = env.eval(&item)?;
+                res = match value.as_ref() {
+                    Value::Integer(j) => Ok(res && (i == j)),
+                    _ => Err("Non-integer '{}' found in integer equals"),
+                }?;
+                if !res { break; }
+            }
+            Ok(Rc::new(Value::Bool(res)))
         },
         Value::Float(f) => {
-            let mut sum: f64 = *f;
+            let mut res = true;
             for item in rest {
                 let value = env.eval(&item)?;
-                let value = match value.as_ref() {
-                    Value::Float(g) => Ok(g),
-                    _ => Err(format!("Non-float '{}' found in float sum", value))
+                res = match value.as_ref() {
+                    Value::Float(g) => Ok(res && (f == g)),
+                    _ => Err("Non-float '{}' found in float equals"),
                 }?;
-                sum += value;
+                if !res { break; }
             }
-            Ok(Rc::new(Value::Float(sum)))
+            Ok(Rc::new(Value::Bool(res)))
         },
-        _ => Err("Must apply '+' to numeric types".to_string())
+        _ => Err("Must apply '=' to numeric or boolean types".to_string()),
     }
 }
 

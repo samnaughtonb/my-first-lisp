@@ -225,7 +225,7 @@ fn equals<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, St
                 let value = env.eval(&item)?;
                 res = match value.as_ref() {
                     Value::Bool(c) => Ok(res && (b == c)),
-                    _ => Err("Non-boolean '{}' found in boolean equals"),
+                    _ => Err(format!("Non-boolean '{}' found in boolean equals", value)),
                 }?;
                 if !res { break; }
             }
@@ -237,7 +237,7 @@ fn equals<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, St
                 let value = env.eval(&item)?;
                 res = match value.as_ref() {
                     Value::Integer(j) => Ok(res && (i == j)),
-                    _ => Err("Non-integer '{}' found in integer equals"),
+                    _ => Err(format!("Non-integer '{}' found in integer equals", value)),
                 }?;
                 if !res { break; }
             }
@@ -249,7 +249,7 @@ fn equals<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, St
                 let value = env.eval(&item)?;
                 res = match value.as_ref() {
                     Value::Float(g) => Ok(res && (f == g)),
-                    _ => Err("Non-float '{}' found in float equals"),
+                    _ => Err(format!("Non-float '{}' found in float equals", value)),
                 }?;
                 if !res { break; }
             }

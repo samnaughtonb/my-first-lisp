@@ -17,7 +17,7 @@ pub enum Expr {
 impl Display for Script {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         for expr in self.0.iter() {
-            let _ = write!(fmt, "{}", expr)?;
+            write!(fmt, "{}", expr)?;
         }
         Ok(())
     }
@@ -31,9 +31,9 @@ impl Display for Expr {
             Expr::Float(f) => write!(fmt, "{}", f),
             Expr::Symbol(sym) => write!(fmt, "{}", sym),
             Expr::List(list) => {
-                let _ = write!(fmt, "(")?;
+                write!(fmt, "(")?;
                 for item in list.iter() {
-                    let _ = write!(fmt, "{} ", item)?;
+                    write!(fmt, "{} ", item)?;
                 }
                 write!(fmt, ")")
             },

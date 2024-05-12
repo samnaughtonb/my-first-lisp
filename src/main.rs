@@ -42,7 +42,7 @@ fn main() {
                 io::stdout().flush().unwrap();
 
                 let mut script = String::new();
-                let _ = io::stdin().read_line(&mut script);                
+                let _ = io::stdin().read_line(&mut script);
                 match inst.parse(&script) {
                     Ok(tree) => {
                         let tree_cloned = tree.clone();

@@ -95,7 +95,7 @@ impl<'a> Env<'a> {
             },
             ast::Expr::List(list) => {
                 let (first, rest) = list.split_first().ok_or("List cannot be empty")?;
-                let res = self.eval(&first)?;
+                let res = self.eval(first)?;
                 match res.as_ref() {
                     Value::Func(f) => match f {
                         Func::BuiltIn { func, .. } => {
@@ -176,12 +176,12 @@ macro_rules! arithmetic_builtin {
     ($name:ident, $op:tt) => {
         fn $name<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
             let (first, rest) = args.split_first().ok_or(concat!("Cannot apply '", stringify!($op), "' to zero arguments"))?;
-            let first = env.eval(&first)?;
+            let first = env.eval(first)?;
             match first.as_ref() {
                 Value::Integer(i) => {
                     let mut res: i64 = *i;
                     for item in rest {
-                        let value = env.eval(&item)?;
+                        let value = env.eval(item)?;
                         let value = match value.as_ref() {
                             Value::Integer(j) => Ok(j),
                             _ => Err(format!(concat!("Non-integer '{}' found in integer ", stringify!($name)), value))
@@ -193,7 +193,7 @@ macro_rules! arithmetic_builtin {
                 Value::Float(f) => {
                     let mut res: f64 = *f;
                     for item in rest {
-                        let value = env.eval(&item)?;
+                        let value = env.eval(item)?;
                         let value = match value.as_ref() {
                             Value::Float(g) => Ok(g),
                             _ => Err(format!(concat!("Non-float '{}' found in float ", stringify!($name)), value))
@@ -218,12 +218,12 @@ fn equals<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, St
         return Err("Cannot apply '=' to fewer than 2 arguments".to_string());
     }
     let (first, rest) = args.split_first().unwrap();
-    let first = env.eval(&first)?;
+    let first = env.eval(first)?;
     match first.as_ref() {
         Value::Bool(b) => {
             let mut res = true;
             for item in rest {
-                let value = env.eval(&item)?;
+                let value = env.eval(item)?;
                 res = match value.as_ref() {
                     Value::Bool(c) => Ok(res && (b == c)),
                     _ => Err(format!("Non-boolean '{}' found in boolean equals", value)),
@@ -235,7 +235,7 @@ fn equals<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, St
         Value::Integer(i) => {
             let mut res = true;
             for item in rest {
-                let value = env.eval(&item)?;
+                let value = env.eval(item)?;
                 res = match value.as_ref() {
                     Value::Integer(j) => Ok(res && (i == j)),
                     _ => Err(format!("Non-integer '{}' found in integer equals", value)),
@@ -247,7 +247,7 @@ fn equals<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, St
         Value::Float(f) => {
             let mut res = true;
             for item in rest {
-                let value = env.eval(&item)?;
+                let value = env.eval(item)?;
                 res = match value.as_ref() {
                     Value::Float(g) => Ok(res && (f == g)),
                     _ => Err(format!("Non-float '{}' found in float equals", value)),
@@ -265,11 +265,11 @@ fn less_than<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>,
         return Err("Cannot apply '<' to fewer than 2 arguments".to_string());
     }
     let (first, rest) = args.split_first().unwrap();
-    let first = env.eval(&first)?;
+    let first = env.eval(first)?;
     match first.as_ref() {
         Value::Integer(i) => {
             let second = args.get(1).unwrap();
-            let second = env.eval(&second)?;
+            let second = env.eval(second)?;
             match second.as_ref() {
                 Value::Integer(j) => Ok(Rc::new(Value::Bool(i < j))),
                 _ => Err(format!("Cannot compare integer '{}' with non-integer '{}'", first, second)),
@@ -277,7 +277,7 @@ fn less_than<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>,
         },
         Value::Float(f) => {
             let second = args.get(1).unwrap();
-            let second = env.eval(&second)?;
+            let second = env.eval(second)?;
             match second.as_ref() {
                 Value::Float(g) => Ok(Rc::new(Value::Bool(f < g))),
                 _ => Err(format!("Cannot compare float '{}' with non-float '{}'", first, second)),
@@ -312,7 +312,7 @@ impl Display for Value<'_> {
 
 impl Display for Func<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{}", "func")
+        write!(fmt, "func")
     }
 }
 

@@ -50,16 +50,9 @@ macro_rules! insert_builtin {
     }
 }
 
-impl<'a> Env<'a> {
+impl<'a> Default for Env<'a> {
 
-    pub fn new() -> Self {
-        Self {
-            data: HashMap::new(),
-            outer: None,
-        }
-    }
-
-    pub fn default() -> Self {
+    fn default() -> Self {
         let mut env = Self::new();
         insert_builtin!(env, "def", def);
         insert_builtin!(env, "fn", func, "fn");
@@ -71,6 +64,16 @@ impl<'a> Env<'a> {
         insert_builtin!(env, "/", division);
         insert_builtin!(env, "<", less_than);
         env
+    }
+}
+
+impl<'a> Env<'a> {
+
+    pub fn new() -> Self {
+        Self {
+            data: HashMap::new(),
+            outer: None,
+        }
     }
 
     fn insert(&mut self, key: ast::Symbol, value: Rc<Value<'a>>) {
@@ -86,9 +89,9 @@ impl<'a> Env<'a> {
 
     pub fn eval(&mut self, expr: &ast::Expr) -> Result<Rc<Value<'a>>, String> {
         match expr {
-            ast::Expr::Bool(b) => Ok(Rc::new(Value::Bool(b.clone()))),
-            ast::Expr::Integer(i) => Ok(Rc::new(Value::Integer(i.clone()))),
-            ast::Expr::Float(f) => Ok(Rc::new(Value::Float(f.clone()))),
+            ast::Expr::Bool(b) => Ok(Rc::new(Value::Bool(*b))),
+            ast::Expr::Integer(i) => Ok(Rc::new(Value::Integer(*i))),
+            ast::Expr::Float(f) => Ok(Rc::new(Value::Float(*f))),
             ast::Expr::Symbol(sym) => match self.get(sym) {
                 Some(val) => Ok(val.clone()),
                 None => { Err(format!("Unknown symbol '{}'", sym)) },
@@ -99,7 +102,7 @@ impl<'a> Env<'a> {
                 match res.as_ref() {
                     Value::Func(f) => match f {
                         Func::BuiltIn { func, .. } => {
-                            let value = (*func)(self, &rest[..])?;
+                            let value = (*func)(self, rest)?;
                             Ok(value.clone())
                         },
                         Func::UserDefined { params, body } => {
@@ -111,16 +114,16 @@ impl<'a> Env<'a> {
                                 outer: Some(Rc::new(RefCell::new(self.clone()))),
                             };
                             for (param, arg) in params.iter().zip(rest.iter()) {
-                                let _ = match param {
+                                match param {
                                     ast::Expr::Symbol(sym) => {
-                                        let arg_val = self.borrow_mut().eval(&arg)?;
+                                        let arg_val = self.borrow_mut().eval(arg)?;
                                         new_env.borrow_mut().insert(ast::Symbol::from(sym), arg_val);
                                         Ok(())
                                     },
                                     _ => Err("..."),
                                 }?;
                             }
-                            new_env.borrow_mut().eval(&body)
+                            new_env.borrow_mut().eval(body)
                         }
                     },
                     _ => Err(format!("{} is not a function", first)),
@@ -130,11 +133,11 @@ impl<'a> Env<'a> {
     }
 }
 
-fn func<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
+fn func<'a>(_env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
     if args.len() != 2 {
         return Err("'fn' takes 2 arguments only".to_string());
     }
-    let params = match args.get(0).unwrap() {
+    let params = match args.first().unwrap() {
         ast::Expr::List(list) => Ok(list),
         _ => Err("..."),
     }?;
@@ -148,7 +151,7 @@ fn ifdef<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, Str
     if args.len() != 3 {
         return Err("'if' takes 3 arguments".to_string());
     }
-    let cond = env.eval(args.get(0).unwrap())?;
+    let cond = env.eval(args.first().unwrap())?;
     match cond.as_ref() {
         Value::Bool(b) => match b {
             true => env.eval(args.get(1).unwrap()),
@@ -162,7 +165,7 @@ fn def<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, Strin
     if args.len() != 2 {
         return Err("'def' takes 2 arguments only".to_string());
     }
-    let name = match args.get(0) {
+    let name = match args.first() {
         Some(ast::Expr::Symbol(sym)) => Ok(sym),
         _ => Err("First argument to 'def' must be a symbol"),
     }?;
@@ -264,7 +267,7 @@ fn less_than<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>,
     if args.len() < 2 {
         return Err("Cannot apply '<' to fewer than 2 arguments".to_string());
     }
-    let (first, rest) = args.split_first().unwrap();
+    let (first, _rest) = args.split_first().unwrap();
     let first = env.eval(first)?;
     match first.as_ref() {
         Value::Integer(i) => {
@@ -294,9 +297,9 @@ impl Display for Value<'_> {
             Value::Integer(i) => write!(fmt, "{}", i),
             Value::Float(f) => write!(fmt, "{}", f),
             Value::List(list) => {
-                let _ = write!(fmt, "(")?;
+                write!(fmt, "(")?;
                 for item in list.iter() {
-                    let _ = write!(fmt, "{} ", item)?;
+                    write!(fmt, "{} ", item)?;
                 }
                 write!(fmt, ")")
             },

@@ -69,6 +69,7 @@ impl<'a> Env<'a> {
         insert_builtin!(env, "-", subtraction);
         insert_builtin!(env, "*", multiplication);
         insert_builtin!(env, "/", division);
+        insert_builtin!(env, "<", less_than);
         env
     }
 
@@ -256,6 +257,33 @@ fn equals<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, St
             Ok(Rc::new(Value::Bool(res)))
         },
         _ => Err("Must apply '=' to numeric or boolean types".to_string()),
+    }
+}
+
+fn less_than<'a>(env: &mut Env<'a>, args: &[ast::Expr]) -> Result<Rc<Value<'a>>, String> {
+    if args.len() < 2 {
+        return Err("Cannot apply '<' to fewer than 2 arguments".to_string());
+    }
+    let (first, rest) = args.split_first().unwrap();
+    let first = env.eval(&first)?;
+    match first.as_ref() {
+        Value::Integer(i) => {
+            let second = args.get(1).unwrap();
+            let second = env.eval(&second)?;
+            match second.as_ref() {
+                Value::Integer(j) => Ok(Rc::new(Value::Bool(i < j))),
+                _ => Err(format!("Cannot compare integer '{}' with non-integer '{}'", first, second)),
+            }
+        },
+        Value::Float(f) => {
+            let second = args.get(1).unwrap();
+            let second = env.eval(&second)?;
+            match second.as_ref() {
+                Value::Float(g) => Ok(Rc::new(Value::Bool(f < g))),
+                _ => Err(format!("Cannot compare float '{}' with non-float '{}'", first, second)),
+            }
+        },
+        _ => Err(format!("Cannot use value '{}' for comparison", first)),
     }
 }
 
